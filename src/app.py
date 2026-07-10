@@ -73,3 +73,50 @@ if __name__ == "__main__":
             
     except Exception as e:
         print(f"❌ Error en el proceso: {e}")
+
+# Se añade codigo para recuperación de texto
+def recuperar_contexto_relevante(base_vectorial, pregunta_usuario, categoria_filtro=None):
+    """
+    Cumple con la Etapa 4 del Challenge: Capa de Recuperación (RAG).
+    1. Transforma la pregunta en embedding.
+    2. Realiza la búsqueda semántica.
+    3. Aplica filtrado por metadatos si se solicita.
+    4. Ensambla el contexto final para el LLM.
+    """
+    # Configurar filtros por metadatos (Punto 3 de la tarjeta de Trello)
+    # ChromaDB permite filtrar usando un diccionario simple
+    filtros = None
+    if categoria_filtro and categoria_filtro != "Todas":
+        filtros = {"categoria": categoria_filtro}
+    
+    # Realizar la búsqueda semántica trayendo los 3 fragmentos más relevantes (k=3)
+    # Pasamos el parámetro 'filter' para el filtrado por metadatos nativo
+    documentos_recuperados = base_vectorial.similarity_search(
+        pregunta_usuario, 
+        k=3, 
+        filter=filtros
+    )
+    
+    # Ensamblaje del contexto (Punto 5 de la tarjeta de Trello)
+    # Unimos los fragmentos encontrados en una sola cadena de texto estructurada
+    contexto_ensamblado = ""
+    for i, doc in enumerate(documentos_recuperados, 1):
+        contexto_ensamblado += f"--- Fragmento Fuente {i} ---\n"
+        contexto_ensamblado += f"{doc.page_content}\n"
+        contexto_ensamblado += f"Área Responsable: {doc.metadata['responsable']}\n\n"
+        
+    return contexto_ensamblado, documentos_recuperados
+
+# Prueba rápida de la capa de recuperación
+if __name__ == "__main__":
+    from app import iniciar_base_vectorial
+    ruta = "data/politica_interna.csv"
+    
+    db = iniciar_base_vectorial(ruta)
+    
+    # Simulamos una consulta con filtro de metadatos activado para "Devoluciones"
+    pregunta = "¿Cuánto se tarda en reflejar mi dinero?"
+    contexto, docs = recuperar_contexto_relevante(db, pregunta, categoria_filtro="Devoluciones")
+    
+    print("\n🚀 CONTEXTO ENSAMBLADO LISTO PARA ENVIAR AL LLM:")
+    print(contexto)
