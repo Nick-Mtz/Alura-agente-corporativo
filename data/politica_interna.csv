@@ -1,1 +1,13 @@
-Pregunta,Respuesta
+id,categoria,pregunta,respuesta,responsable
+1,Envios,"¿Cuáles son los tiempos de entrega estándar?","El tiempo de entrega estándar es de 3 a 5 días hábiles para ciudades principales y hasta 7 días hábiles para zonas extendidas.",Logistica
+2,Envios,"¿Cómo puedo rastrear mi pedido?","Una vez confirmado el envío, se genera un número de guía automático enviado por correo. El colaborador o cliente puede rastrearlo en el portal interno de la fletera asignada.",Logistica
+3,Envios,"¿Qué hago si mi paquete aparece como entregado pero no lo he recibido?","Debes levantar un reporte con el área de Logística en un plazo no mayor a 48 horas desde la notificación de entrega para iniciar la investigación con la empresa transportista.",Logistica
+4,Devoluciones,"¿Cuál es el plazo para solicitar un reembolso?","El plazo máximo para solicitar cualquier reembolso o devolución es de 30 días naturales a partir de la fecha de recepción del artículo.",Atencion al Cliente
+5,Devoluciones,"¿Qué artículos no aplican para cambios ni devoluciones?","No se aceptan devoluciones en productos de uso personal, software con licencias activadas, ni artículos que presenten daños por mal uso del usuario.",Atencion al Cliente
+6,Devoluciones,"¿Cuánto tarda en procesarse un reembolso de dinero?","Una vez aprobado el retorno del producto en almacén, el reembolso toma entre 5 y 10 días hábiles en verse reflejado, dependiendo del método de pago original.",Atencion al Cliente
+7,Pagos,"¿Qué métodos de pago están autorizados en la plataforma?","Se aceptan tarjetas de crédito y débito (Visa, Mastercard, Amex), transferencias bancarias SPEI y pagos procesados a través de PayPal.",Finanzas
+8,Pagos,"¿Se pueden emitir facturas fiscales y cuál es el límite de tiempo?","Sí, se puede facturar a través del portal de autofacturación. El límite para generar el CFDI es el último día del mes en curso en el que se realizó la compra.",Finanzas
+9,Garantias,"¿Cuánto tiempo cubre la garantía de fábrica?","Todos nuestros productos electrónicos e industriales cuentan con una garantía estándar de 1 año contra defectos de fabricación.",Calidad
+10,Garantias,"¿Qué documentación se necesita para hacer válida una garantía?","Es indispensable presentar el comprobante de compra original, el número de pedido y evidencia fotográfica o en video que muestre la falla reportada.",Calidad
+11,Soporte,"¿Cómo contacto al área de soporte técnico si la app falla?","Puedes levantar un ticket interno enviando un correo a soporte@tienda.com o a través del canal de comunicación directa en Teams.",Sistemas
+12,Soporte,"¿Qué datos debo incluir al reportar una falla en la plataforma?","Debes proporcionar tu ID de usuario, el navegador web utilizado, una descripción del error y, de ser posible, una captura de pantalla del código de error.",Sistemas
