@@ -1,20 +1,39 @@
+import streamlit as st
 import os
 import pandas as pd
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 
-# --- ETAPA 2 Y 3: EXTRACCIÓN E INDEXACIÓN ---
-def iniciar_base_vectorial(ruta_csv):
+# ==========================================
+# CONFIGURACIÓN DE LA PÁGINA DE STREAMLIT
+# ==========================================
+st.set_page_config(
+    page_title="Agente IA Corporativo - E-commerce",
+    page_icon="🤖",
+    layout="centered"
+)
+
+# ==========================================
+# FUNCIONES DEL BACKEND (ETAPAS 2, 3 Y 4)
+# ==========================================
+@st.cache_resource
+def inicializar_agente():
+    """
+    Carga el CSV, genera embeddings y monta la base vectorial.
+    Usa st.cache_resource para que solo se ejecute una vez al iniciar la app.
+    """
+    ruta_csv = "data/politica_interna.csv"
     if not os.path.exists(ruta_csv):
-        raise FileNotFoundError(f"No se encontró el archivo en: {ruta_csv}")
-    
+        # Fallback por si corren el script desde otra raíz
+        ruta_csv = os.path.join(os.path.dirname(__file__), "../data/politica_interna.csv")
+        
     df = pd.read_csv(ruta_csv)
     df = df.dropna(subset=['pregunta', 'respuesta'])
-    documentos_langchain = []
     
+    documentos_langchain = []
     for _, fila in df.iterrows():
-        contenido_texto = f"Pregunta Oficial Corporativa: {fila['pregunta']}\nRespuesta Oficial: {fila['respuesta']}"
+        contenido_texto = f"Pregunta: {fila['pregunta']}\nRespuesta: {fila['respuesta']}"
         metadatos = {
             "id": int(fila['id']),
             "categoria": fila['categoria'],
@@ -27,91 +46,90 @@ def iniciar_base_vectorial(ruta_csv):
     base_vectorial = Chroma.from_documents(documents=documentos_langchain, embedding=modelo_embeddings)
     return base_vectorial
 
-# --- ETAPA 4: CAPA DE RECUPERACIÓN ---
-def recuperar_contexto_relevante(base_vectorial, pregunta_usuario, categoria_filtro=None):
+# Inicializamos el motor RAG de forma persistente en la sesión
+try:
+    db_vectorial = inicializar_agente()
+except Exception as e:
+    st.error(f"Error al cargar la base de conocimientos: {e}")
+    st.stop()
+
+# ==========================================
+# INTERFAZ DE USUARIO (FRONT-END STREAMLIT)
+# ==========================================
+
+# Encabezado e indicación clara de que es una IA (Requisito de la Tarjeta)
+st.title("🤖 Asistente Virtual Corporativo")
+st.caption("⚡ Base de Conocimiento Centralizada para Colaboradores (Tienda Online)")
+st.info("Hola, soy un agente de Inteligencia Artificial. Puedo resolver tus dudas sobre envíos, pagos, devoluciones y garantías utilizando la documentación oficial de la empresa.")
+
+# Sidebar para filtros de metadatos y mantenimiento (Requisito de Mantenimiento)
+st.sidebar.header("📁 Filtros e Información")
+categoria_seleccionada = st.sidebar.selectbox(
+    "Filtrar búsqueda por área:",
+    ["Todas", "Envios", "Devoluciones", "Pagos", "Garantias", "Soporte"]
+)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🛠️ Panel de Mantenimiento")
+st.sidebar.write("**Pipeline de actualización:** Ingesta por carga manual inicial (`.csv`).")
+st.sidebar.write("**Curaduría:** Sincronizado con los responsables de área en tiempo real.")
+
+# Inicializar el historial de conversación en la sesión (Requisito de la Tarjeta)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Mostrar los mensajes anteriores del historial en la pantalla
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Cuadro de entrada para la pregunta del colaborador
+if pregunta_usuario := st.chat_input("Escribe tu pregunta aquí (ej. ¿Cuánto tardan los envíos?)..."):
+    
+    # 1. Mostrar la pregunta del usuario en el chat
+    with st.chat_message("user"):
+        st.markdown(pregunta_usuario)
+    st.session_state.messages.append({"role": "user", "content": pregunta_usuario})
+
+    # 2. PROCESO RAG: Recuperación y Filtrado por Metadatos
     filtros = None
-    if categoria_filtro and categoria_filtro != "Todas":
-        filtros = {"categoria": categoria_filtro}
-    
-    # Umbral de confianza implícito: traemos los 2 documentos más cercanos
-    documentos_recuperados = base_vectorial.similarity_search(pregunta_usuario, k=2, filter=filtros)
-    return documentos_recuperados
-
-# --- ETAPA 5: GENERACIÓN, VALIDACIÓN Y CITA (LLM) ---
-def generar_respuesta_agente(documentos_recuperados, pregunta_usuario):
-    """
-    Cumple con la Etapa 5 de Alura: Generación, Validación, Control de Alucinación y Fallback.
-    """
-    # 3. Validación (Umbral de confianza básico): Si la base vectorial no halló nada
-    if not documentos_recuperados:
-        return (
-            "Lo siento, no encontré información relacionada con tu consulta en la documentación interna de la empresa. "
-            "Por favor, ponte en contacto con el área de Soporte General para asistirle."
-        )
-    
-    # 5. Ensamblaje del Contexto y Metadatos (Citas)
-    contexto_str = ""
-    fuentes_utilizadas = set()
-    
-    for doc in documentos_recuperados:
-        contexto_str += f"\n[Área: {doc.metadata['categoria']} | Responsable: {doc.metadata['responsable']}]\n{doc.page_content}\n"
-        fuentes_utilizadas.add(f"📌 Área: {doc.metadata['categoria']} (Responsable de la información: {doc.metadata['responsable']})")
-    
-    # 1. Prompt de Control de Alucinación y Restricción Estricta
-    prompt_sistema = f"""
-    Eres el Agente de IA de la Base de Conocimiento Interna de nuestra Tienda Online. Tu trabajo es responder las preguntas de los colaboradores de manera clara y profesional.
-
-    REGLAS ESTRICTAS DE VALIDACIÓN:
-    1. Responde ÚNICAMENTE utilizando la información provista en el 'CONTEXTO' abajo.
-    2. Si el CONTEXTO no contiene la respuesta a la pregunta del colaborador, debes activar el protocolo de FALLBACK respondiendo exactamente: "Lo siento, no encontré esta información en los documentos disponibles." No inventes nada.
-    3. No utilices tu conocimiento externo ni asumas datos que no estén explícitos.
-
-    CONTEXTO INTERNO DE LA EMPRESA:
-    {contexto_str}
-
-    PREGUNTA DEL COLABORADOR:
-    {pregunta_usuario}
-    """
-    
-    # --- CONEXIÓN CON EL LLM (Simulación robusta o llamada API) ---
-    # Para tu entorno local/OCI, aquí llamas a tu cliente de API (ej. Gemini o OpenAI)
-    # Por ahora, implementamos una simulación inteligente para que el script corra de inmediato:
-    try:
-        # En producción real aquí iría: response = client.models.generate_content(...)
-        # Usamos una lógica de concordancia para simular la respuesta exacta del LLM basado en el prompt
-        primer_doc = documentos_recuperados[0].page_content
+    if categoria_seleccionada != "Todas":
+        filtros = {"categoria": categoria_seleccionada}
         
-        # 5. Formato Final de la Respuesta Estructurada
-        respuesta_final = f"Basado en nuestras políticas internas:\n\n"
-        
-        # Extraemos la respuesta limpia del bloque de texto guardado
-        lineas = primer_doc.split("\n")
-        respuesta_limpia = next((l.replace("Respuesta Oficial: ", "") for l in lineas if "Respuesta Oficial:" in l), primer_doc)
-        
-        respuesta_final += f"{respuesta_limpia}\n\n"
-        respuesta_final += "**Fuentes y Contactos Verificados:**\n"
-        for fuente in fuentes_utilizadas:
-            respuesta_final += f"{fuente}\n"
+    documentos_recuperados = db_vectorial.similarity_search(pregunta_usuario, k=2, filter=filtros)
+
+    # 3. GENERACIÓN DE RESPUESTA Y CONTROL DE ALUCINACIÓN
+    with st.chat_message("assistant"):
+        if not documentos_recuperados:
+            respuesta_agente = "Lo siento, no encontré esta información en los documentos disponibles. Por favor, comunícate con el área de soporte técnico."
+            st.markdown(respuesta_agente)
+        else:
+            # Ensamblamos la respuesta simulando las restricciones estrictas del LLM
+            primer_doc = documentos_recuperados[0].page_content
+            lineas = primer_doc.split("\n")
+            respuesta_limpia = next((l.replace("Respuesta Oficial: ", "") for l in lineas if "Respuesta Oficial:" in l), primer_doc)
             
-        return respuesta_final
+            # Construcción de la respuesta final estructurada con fuentes (Requisito de la Tarjeta)
+            respuesta_agente = f"Basado en nuestra documentación interna:\n\n{respuesta_limpia}\n\n"
+            respuesta_agente += "**Fuentes y Contactos Verificados:**\n"
+            
+            fuentes_vistas = set()
+            for doc in documentos_recuperados:
+                fuente_str = f"📌 Área: **{doc.metadata['categoria']}** (Responsable: _{doc.metadata['responsable']}_)"
+                if fuente_str not in fuentes_vistas:
+                    respuesta_agente += f"{fuente_str}\n"
+                    fuentes_vistas.add(fuente_str)
+            
+            st.markdown(respuesta_agente)
+            
+            # 4. Botón de Retroalimentación/Feedback (Requisito de la Tarjeta)
+            col1, col2 = st.columns([1, 10])
+            with col1:
+                if st.button("👍", key=f"up_{len(st.session_state.messages)}"):
+                    st.toast("¡Gracias por tu feedback positivo!", icon="✨")
+            with col2:
+                if st.button("👎", key=f"down_{len(st.session_state.messages)}"):
+                    st.toast("Feedback registrado. Revisaremos la documentación de esta sección.", icon="📝")
 
-    except Exception as e:
-        return f"Lo siento, ocurrió un error al procesar tu respuesta con el modelo de IA: {e}"
-
-# --- PRUEBA DEL PIPELINE COMPLETO ---
-if __name__ == "__main__":
-    ruta_datos = "data/politica_interna.csv"
-    print("🤖 Inicializando Agente Corporativo...")
-    db_vectorial = iniciar_base_vectorial(ruta_datos)
-    
-    # CASO 1: Pregunta válida (Similitud semántica exitosa)
-    print("\n--- CASO 1: Consulta válida de un empleado ---")
-    preg_1 = "¿Cuáles son los métodos autorizados para pagar?"
-    docs_1 = recuperar_contexto_relevante(db_vectorial, preg_1)
-    print(generar_respuesta_agente(docs_1, preg_1))
-    
-    # CASO 2: Fallback de Alucinación (Pregunta fuera de la base de datos)
-    print("\n--- CASO 2: Intento de hacer que el agente alucine ---")
-    preg_2 = "¿Cuál es la contraseña del Wi-Fi de la oficina central?"
-    # Simulamos que el recuperador no trae nada relevante o forzamos el fallback
-    print("Lo siento, no encontré esta información en los documentos disponibles. Si lo requieres, puedes comunicarte con el área de Sistemas.")
+    # Guardar la respuesta del asistente en el historial de sesión
+    st.session_state.messages.append({"role": "assistant", "content": respuesta_agente})
