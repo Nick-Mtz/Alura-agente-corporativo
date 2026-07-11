@@ -78,7 +78,7 @@ Protocolo de Fallback (Control de Alucinación): Si el colaborador realiza una p
 ☁️ Evidencia del Despliegue en la Nube
 El agente inteligente se encuentra completamente desplegado en la nube, garantizando disponibilidad inmediata y libre acceso para toda la organización.
 
-Enlace público de la aplicación: 🔗 Acceder al Agente Corporativo en Producción
+Enlace público de la aplicación: 🔗 [Acceder al Agente Corporativo en Producción](https://alura-agente-corporativo-an98bxbbmrrr4cbvupnrxv.streamlit.app/)
 
 Nota de Arquitectura de Infraestructura: Originalmente planificado para instancias de cómputo en Oracle Cloud Infrastructure (OCI), el despliegue final de producción se migró estratégicamente a la infraestructura elástica de Streamlit Community Cloud debido a restricciones temporales de cuota y saturación de capacidad de hardware en la región regional disponible (AD-1/OCI Querétaro). Esto permitió garantizar el lanzamiento del servicio sin interrupciones bajo una arquitectura multinube.
 
