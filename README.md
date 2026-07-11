@@ -84,4 +84,4 @@ Nota de Arquitectura de Infraestructura: Originalmente planificado para instanci
 
 Captura de pantalla del Agente en ejecución:
 
-![Evidencia del Agente en producción](src/evidencia2.jpg)
+![Evidencia del Agente en producción](src/evidencia.jpg)
